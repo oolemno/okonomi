@@ -84,7 +84,7 @@ export default defineConfig({
   plugins: [nodeShims(), react(), tailwindcss()],
   resolve: {
     alias: {
-      "ssb-motor": path.resolve(__dirname, "../ssb-motor/src"),
+      "ssb-motor": path.resolve(__dirname, "ssb-motor-src"),
     },
   },
   server: {

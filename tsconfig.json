@@ -15,7 +15,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "paths": {
-      "ssb-motor": ["../ssb-motor/src"]
+      "ssb-motor": ["./ssb-motor-src"]
     }
   },
   "include": ["src", "vite.config.ts"]
