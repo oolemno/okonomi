@@ -1,0 +1,5 @@
+node_modules
+dist
+.ssb-cache
+.claude
+*.local
