@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "api/market.ts": {
-      "runtime": "edge"
-    }
-  }
-}
+{}
