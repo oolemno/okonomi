@@ -3,3 +3,4 @@ dist
 .ssb-cache
 .claude
 *.local
+.vercel

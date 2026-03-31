@@ -7,11 +7,16 @@ import {
   fetchBrregStats,
   fetchEurostatInflasjon,
   fetchKraftpris,
+  fetchOsebx,
+  fetchBrent,
+  fetchNbim,
   type StyringsrenteData,
   type KronekursData,
   type BrregData,
   type EurostatRow,
   type KraftprisData,
+  type YahooData,
+  type NbimData,
 } from "./api";
 
 // ─── Generic async state ────────────────────────────────────────────────────
@@ -53,6 +58,9 @@ export function useEconomyData() {
   const brreg = useAsync<BrregData>(() => fetchBrregStats());
   const eurostat = useAsync<EurostatRow[]>(() => fetchEurostatInflasjon());
   const kraft = useAsync<KraftprisData>(() => fetchKraftpris());
+  const osebx = useAsync<YahooData>(() => fetchOsebx());
+  const brent = useAsync<YahooData>(() => fetchBrent());
+  const nbim = useAsync<NbimData>(() => fetchNbim());
 
-  return { kpi, bolig, ledighet, lonn, rente, kurs, brreg, eurostat, kraft };
+  return { kpi, bolig, ledighet, lonn, rente, kurs, brreg, eurostat, kraft, osebx, brent, nbim };
 }

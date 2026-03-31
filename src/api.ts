@@ -223,3 +223,88 @@ function yesterdayStr(now: Date): string {
   const d = new Date(now.getTime() - 86400000);
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+// ─── Yahoo Finance (via /api/market serverless / Vite middleware) ─────────────
+
+export interface YahooData {
+  price: number;
+  currency: string;
+  previousClose: number;
+  history: Array<{ value: number }>;
+}
+
+function parseYahooResult(data: unknown): YahooData {
+  const d = data as { chart?: { result?: unknown[] }; error?: string };
+  if (d?.error) throw new Error(`Yahoo: ${d.error}`);
+  const result = d?.chart?.result?.[0] as {
+    meta: { regularMarketPrice: number; currency: string; chartPreviousClose: number };
+    indicators: { quote: [{ close: (number | null)[] }] };
+  } | undefined;
+  if (!result) throw new Error("Yahoo: no result");
+  const closes = result.indicators?.quote?.[0]?.close ?? [];
+  const history = closes
+    .filter((v): v is number => v != null)
+    .map((value) => ({ value }));
+  return {
+    price: result.meta.regularMarketPrice,
+    currency: result.meta.currency ?? "",
+    previousClose:
+      result.meta.chartPreviousClose ?? history[0]?.value ?? result.meta.regularMarketPrice,
+    history,
+  };
+}
+
+// Fetch both symbols in one request to /api/market
+let _marketPromise: Promise<{ osebx: YahooData; brent: YahooData }> | null = null;
+
+function fetchMarket(): Promise<{ osebx: YahooData; brent: YahooData }> {
+  if (_marketPromise) return _marketPromise;
+  _marketPromise = fetch("/api/market?symbols=OSEBX.OL,BZ%3DF")
+    .then(async (res) => {
+      if (!res.ok) throw new Error(`/api/market: ${res.status}`);
+      const json = await res.json();
+      const osebxRaw = json["OSEBX.OL"];
+      const brentRaw = json["BZ=F"];
+      if (osebxRaw?.error) throw new Error(osebxRaw.error);
+      if (brentRaw?.error) throw new Error(brentRaw.error);
+      return {
+        osebx: parseYahooResult(osebxRaw),
+        brent: parseYahooResult(brentRaw),
+      };
+    })
+    .finally(() => {
+      // Reset after 5 min so a page reload gets fresh data
+      setTimeout(() => { _marketPromise = null; }, 5 * 60 * 1000);
+    });
+  return _marketPromise;
+}
+
+export const fetchOsebx = (): Promise<YahooData> =>
+  fetchMarket().then((m) => m.osebx);
+export const fetchBrent = (): Promise<YahooData> =>
+  fetchMarket().then((m) => m.brent);
+
+// ─── NBIM – Oljefondet ───────────────────────────────────────────────────────
+
+export interface NbimData {
+  valueBillions: number;
+  date: string;
+  isRaised: number; // 0 = falling, 1 = rising
+}
+
+const NBIM_KEY = "263c30dd-d5ba-41d6-a9b1-c1fb59cf30da";
+
+export async function fetchNbim(): Promise<NbimData> {
+  const url = `https://www.nbim.no/LiveNavHandler/Current.ashx?l=en-GB&t=${Date.now()}&PreviousNavValue=&key=${NBIM_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`NBIM: ${res.status}`);
+  const data = await res.json();
+  const raw: string = data.Value ?? "";
+  const num = Number(raw.replace(/\s/g, ""));
+  if (!num) throw new Error("NBIM: could not parse value");
+  return {
+    valueBillions: Math.round(num / 1_000_000_000),
+    date: data.Date ?? "",
+    isRaised: data.d?.liveNavList?.[0]?.isRaised ?? 0,
+  };
+}

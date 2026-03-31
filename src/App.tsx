@@ -115,6 +115,70 @@ function SmallCard({
   );
 }
 
+// ─── SparkCard ──────────────────────────────────────────────────────────────
+
+function SparkCard({
+  label,
+  value,
+  change,
+  history,
+  sub,
+  loading,
+  error,
+}: {
+  label: string;
+  value?: string;
+  change?: number;
+  history?: Array<{ value: number }>;
+  sub?: React.ReactNode;
+  loading: boolean;
+  error?: string;
+}) {
+  return (
+    <div className={cardClass}>
+      <div className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+        {label}
+      </div>
+      {loading ? (
+        <Skeleton h="h-14" />
+      ) : error ? (
+        <ErrorMsg msg="Kunne ikke hente" />
+      ) : (
+        <div className="flex items-end justify-between gap-2 mt-1">
+          <div className="min-w-0">
+            <div className="text-2xl font-semibold leading-tight truncate">
+              {value}
+            </div>
+            <div className="mt-0.5 text-sm">
+              {change !== undefined ? (
+                <TrendArrow value={change} />
+              ) : (
+                sub
+              )}
+            </div>
+          </div>
+          {history && history.length > 2 && (
+            <div className="w-20 h-10 flex-shrink-0 opacity-75">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#6366f1"
+                    strokeWidth={1.5}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Chart ──────────────────────────────────────────────────────────────────
 
 function KursChart({
@@ -257,7 +321,7 @@ function KraftprisRow({
 // ─── App ────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { kpi, bolig, ledighet, lonn, rente, kurs, brreg, eurostat, kraft } =
+  const { kpi, bolig, ledighet, lonn, rente, kurs, brreg, eurostat, kraft, osebx, brent, nbim } =
     useEconomyData();
 
   // Derive hero values
@@ -425,6 +489,60 @@ export default function App() {
         />
       </div>
 
+      {/* Markeder – OSEBX, Brent, Oljefond */}
+      <div className="grid grid-cols-2 gap-3">
+        <SparkCard
+          label="Oslo Børs"
+          value={osebx.status === "ok" ? fmtKr(osebx.data.price) : undefined}
+          change={
+            osebx.status === "ok"
+              ? ((osebx.data.price / osebx.data.previousClose - 1) * 100)
+              : undefined
+          }
+          history={osebx.status === "ok" ? osebx.data.history : undefined}
+          loading={osebx.status === "loading"}
+          error={osebx.status === "error" ? osebx.error : undefined}
+        />
+        <SparkCard
+          label="Brent crude"
+          value={
+            brent.status === "ok"
+              ? `$${fmt(brent.data.price, 1)}`
+              : undefined
+          }
+          change={
+            brent.status === "ok"
+              ? ((brent.data.price / brent.data.previousClose - 1) * 100)
+              : undefined
+          }
+          history={brent.status === "ok" ? brent.data.history : undefined}
+          loading={brent.status === "loading"}
+          error={brent.status === "error" ? brent.error : undefined}
+        />
+      </div>
+      <SparkCard
+        label="Oljefondet"
+        value={
+          nbim.status === "ok"
+            ? `${fmtKr(nbim.data.valueBillions)} mrd kr`
+            : undefined
+        }
+        sub={
+          nbim.status === "ok" ? (
+            <span className="text-gray-500">
+              {nbim.data.isRaised === 1 ? (
+                <span className="text-(--color-positive)">▲ stiger</span>
+              ) : (
+                <span className="text-(--color-negative)">▼ synker</span>
+              )}{" "}
+              · live
+            </span>
+          ) : undefined
+        }
+        loading={nbim.status === "loading"}
+        error={nbim.status === "error" ? nbim.error : undefined}
+      />
+
       {/* EUR/NOK chart */}
       <KursChart data={kurs} />
 
@@ -436,7 +554,7 @@ export default function App() {
 
       {/* Footer */}
       <p className="text-[10px] text-gray-600 text-center pt-2">
-        Kilder: Norges Bank · SSB · Brreg · Eurostat · hvakosterstrommen.no
+        Kilder: Norges Bank · SSB · Brreg · Eurostat · NBIM · Yahoo Finance · hvakosterstrommen.no
       </p>
     </div>
   );
