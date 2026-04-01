@@ -227,7 +227,7 @@ function KursChart({
               fontSize: 12,
             }}
             labelStyle={{ color: "#9ca3af" }}
-            formatter={(v: unknown) => [typeof v === "number" ? v.toFixed(4) : v, "EUR/NOK"]}
+            formatter={(v: number | string) => [typeof v === "number" ? v.toFixed(4) : String(v), "EUR/NOK"]}
           />
           <Line
             type="monotone"
